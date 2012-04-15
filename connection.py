@@ -1,4 +1,8 @@
 from twisted.internet import reactor, protocol
+from twisted.python import log
+import sys
+import state_machine as State
+import subscription as Sub
 
 class PeerManager:
     """
@@ -21,23 +25,123 @@ class PeerManager:
         self.peers = {}
         self.unconnectedPeers = {}
         self.peerConnections = {}
+
+    def AddPeer(self, name):
+        log.msg('try to add peer: ' + name)
+        if not self.peers.has_key(name):
+            self.peers[name] = None
+            self.unconnectedPeers[name] = None
         
-    def ConnectionCallbacker:
-        def __init__(self, mapper, addr):
-            self.mapper = mapper
-            self.addr = addr
-
-        def SetRealAddress(self, addr):
-            self.mapper[self.addr.domainName] = addr
-
-    def ResolveDomainName(self, name):
-        d = reactor.resolve(name)
-        callbacker = ConnectionCallbacker(self.unconnectedPeers, name)
-        d.addCallback(callbacker.SetRealAddress)
-
     def ConnectPeers(self):
-        for name, endpoint in self.unconnectedPeers.items()
-            callbacker = ConnectionCallbacker(self.unconnectedPeers, 
-                                              endpoint)
-            d = reactor.resolve(name)
-            d.addCallback(callbacker.SetRealAddress)
+        log.msg('try to connect all unconnected peers')
+        for name, connection in self.unconnectedPeers.items():
+            log.msg('try to connect to peer: ' + name)
+            factory = PeerConnectionFactory(name, 'pan', self)
+            reactor.connectTCP(name, 80, factory, 1)
+        
+        factory = PeerConnectionFactory(None, 'pan', self)
+        reactor.listenTCP(10000, factory)
+
+    def Register(self, name, connection):
+        # drop connection if the peer is already in the connection list
+        if self.peerConnections.has_key(name):
+            log.msg('Peer ' + name + ' is already connected')
+            return False
+
+        if self.unconnectedPeers.has_key(name):
+            del self.unconnectedPeers[name]
+        peerAddr = connection.transport.getPeer()
+
+        self.peers[name] = peerAddr
+        self.peerConnections[name] = connection
+        log.msg("Registered connection for " + name + "@" + str(peerAddr))
+        return True
+
+    def InstallSUB(self, name, sub):
+        if self.rt.has_key(name):
+            self.rt[name].append(sub)
+        else:
+            self.rt[name] = [sub]
+
+    def Forward(self, data):
+        next_hop = []
+
+        for name, subs in self.rt:
+            for sub in subs:
+                if sub.match(data):
+                    next_hop.append(name)
+                    break
+
+        for host in next_hop:
+            self.peerConnections[host].Send(data)
+
+class PeerConnection(protocol.Protocol):
+    
+    def connectionMade(self):
+        log.msg("connection made")
+        domainName = self.factory.domainName
+        localDomainName = self.factory.localDomainName
+
+        peer = self.transport.getPeer()
+        self.remoteHost = peer.host
+        self.remotePort = peer.port
+        self.stateMachine = State.StateMachine(self)
+
+        if self.factory.domainName is None:
+            self.stateMachine.Set(State.INIT)
+            self.Send('NAMEREQ,')
+            return
+
+        if not self.factory.peerManager.Register(domainName, self):
+            self.Send('TERM,duplicate')
+            self.CloseConnection()
+        else:
+            # this connection is registered
+            self.stateMachine.Set(State.READY)
+
+    def dataReceived(self, data):
+        data = data.strip()
+        log.msg('Data received from ' + self.remoteHost + ' ' + str(self.remotePort) )
+        log.msg('Data: ' + data)
+        output = self.stateMachine.Accept(data)
+        if output is not None:
+            self.Send(output)
+    
+    def CloseConnection(self, reason = ''):
+        log.msg('Closing connection to ' + 
+                self.remoteHost +
+                str(self.remotePort))
+        log.msg('Reason: ' + reason)
+        self.transport.loseConnection()
+
+    def Send(self, data):
+        log.msg('Sending data to ' +
+                self.remoteHost +
+                str(self.remotePort))
+        log.msg('Data: ' + data)
+        self.transport.write(data)
+
+    def RecvSUB(self, data):
+        log.msg('Received subscription: ' + data)
+        sub = Subscription(data)
+        self.factory.peerManager.InstallSUB(self.factory.domainName, sub)
+
+    def connectionLost(self, reason):
+        log.msg('connection lost for ' + self.remoteHost + ' ' + str(self.remotePort) )
+        log.msg('reason: ' + reason.getErrorMessage())
+        
+class PeerConnectionFactory(protocol.ServerFactory, protocol.ClientFactory):
+    protocol = PeerConnection
+
+    def __init__(self, name, localName, manager):
+        self.domainName = name
+        self.localDomainName = localName
+        self.peerManager = manager
+
+if __name__ == '__main__':
+    log.startLogging(sys.stdout)
+    manager = PeerManager()
+    manager.AddPeer('astro.temple.edu')
+    manager.ConnectPeers()
+
+    reactor.run()
