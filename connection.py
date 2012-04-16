@@ -2,7 +2,7 @@ from twisted.internet import reactor, protocol
 from twisted.python import log
 import sys
 import state_machine as State
-import subscription as Sub
+from subscription import Subscription
 
 class PeerManager:
     """
@@ -57,6 +57,11 @@ class PeerManager:
         log.msg("Registered connection for " + name + "@" + str(peerAddr))
         return True
 
+    def RecvSUB(self, name, data):
+        log.msg('Received subscription: ' + data)
+        sub = Subscription(data)
+        self.InstallSUB(name, sub)
+
     def InstallSUB(self, name, sub):
         if self.rt.has_key(name):
             self.rt[name].append(sub)
@@ -81,6 +86,9 @@ class PeerConnection(protocol.Protocol):
         log.msg("connection made")
         domainName = self.factory.domainName
         localDomainName = self.factory.localDomainName
+
+        self.remoteDomainName = self.factory.domainName
+        self.localDomainName = self.factory.localDomainName
 
         peer = self.transport.getPeer()
         self.remoteHost = peer.host
@@ -121,10 +129,6 @@ class PeerConnection(protocol.Protocol):
         log.msg('Data: ' + data)
         self.transport.write(data)
 
-    def RecvSUB(self, data):
-        log.msg('Received subscription: ' + data)
-        sub = Subscription(data)
-        self.factory.peerManager.InstallSUB(self.factory.domainName, sub)
 
     def connectionLost(self, reason):
         log.msg('connection lost for ' + self.remoteHost + ' ' + str(self.remotePort) )

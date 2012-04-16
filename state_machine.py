@@ -66,7 +66,8 @@ class InitState(State):
 class ReadyState(State):
     def HandleSUB(self, data):
         log.msg('Received subscription: ' + data)
-        self.connection.RecvSUB(data)
+        #self.connection.RecvSUB(data)
+        self.connection.factory.peerManager.RecvSUB(self.connection.remoteDomainName, data)
         return None, self
 
 class StateMachine:
