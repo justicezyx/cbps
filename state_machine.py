@@ -70,6 +70,10 @@ class ReadyState(State):
         self.connection.factory.peerManager.RecvSUB(self.connection.remoteDomainName, data)
         return None, self
 
+    def HandleMSG(self, data):
+        self.connection.factory.peerManager.RecvMSG(data)
+        return None, self
+
 class StateMachine:
 
     def __init__(self, connection):

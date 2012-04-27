@@ -25,6 +25,7 @@ class PeerManager:
         self.peers = {}
         self.unconnectedPeers = {}
         self.peerConnections = {}
+        self.rt = {}
 
     def AddPeer(self, name):
         log.msg('try to add peer: ' + name)
@@ -48,6 +49,8 @@ class PeerManager:
             log.msg('Peer ' + name + ' is already connected')
             return False
 
+        connection.remoteDomainName = name
+
         if self.unconnectedPeers.has_key(name):
             del self.unconnectedPeers[name]
         peerAddr = connection.transport.getPeer()
@@ -58,7 +61,7 @@ class PeerManager:
         return True
 
     def RecvSUB(self, name, data):
-        log.msg('Received subscription: ' + data)
+        log.msg('Received subscription: ' + data + 'from ' + name)
         sub = Subscription(data)
         self.InstallSUB(name, sub)
 
@@ -70,15 +73,23 @@ class PeerManager:
 
     def Forward(self, data):
         next_hop = []
+        vals = data.split(":", 1)[0]
+        print self.rt
+        print vals
 
-        for name, subs in self.rt:
+        for name in self.rt:
+            subs = self.rt[name]
+
             for sub in subs:
-                if sub.match(data):
+                if sub.Match(vals):
                     next_hop.append(name)
                     break
 
         for host in next_hop:
             self.peerConnections[host].Send(data)
+
+    def RecvMSG(self, data):
+        self.Forward(data)
 
 class PeerConnection(protocol.Protocol):
     

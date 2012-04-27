@@ -1,8 +1,8 @@
 import re
 
-INT = 'INT'
-DOUBLE = 'DOU'
-CHAR = 'CHR'
+INT = 'INTEGER'
+DOU = 'DOUBLE'
+STR = 'STRING'
 
 IN = 'in'
 LT = '<'
@@ -15,29 +15,114 @@ class Subscription:
     def __init__(self, data):
         self.attrConstraints = {}
 
-        for constraint in data.split('}{')
+        for constraint in data.split('}{'):
             constraint = constraint.strip('{}')
-            Type,Name,Op,Val = constraint.split(':', 3)
+            Type,Name,Op,Val = constraint.split(',', 3)
             
             self.attrConstraints[Name] = Constraint(Type, Op, Val)
 
         self.count = len(self.attrConstraints)
 
-            
-    def Match(self, **val):
-        if len(val) < self.count:
+    def Match(self, val):
+        vals = val.split(",")
+        if len(vals) < self.count:
             return False
 
+        assignments = {}
+        for v in vals:
+            name,assignment = v.split("=")
+            assignments[name] = assignment
+            
         for name,constraint in self.attrConstraints.items():
-            if not val.has_key(name): # has no value for the attr
+            if not assignments.has_key(name):
                 return False
-
-            if not constraint.Match(val[name]):
+            if not constraint.Match(assignments[name]):
                 return False
 
         return True
+            
+    #def Match(self, **val):
+        #if len(val) < self.count:
+            #return False
 
+        #for name,constraint in self.attrConstraints.items():
+            #if not val.has_key(name): # has no value for the attr
+                #return False
+
+            #if not constraint.Match(val[name]):
+                #return False
+
+        #return True
+
+class OpIN:
+    def Check(self, cons, val):
+        return val > cons[0] and val < cons[1]
+
+class OpGT:
+    def Check(self, cons, val):
+        return val > cons
+
+class OpGE:
+    def Check(self, cons, val):
+        return val >= cons
+
+class OpLT:
+    def Check(self, cons, val):
+        return val < cons
+
+class OpLE:
+    def Check(self, cons, val):
+        return val <= cons
+
+def CreateOperator(type):
+    if type == IN:
+        return OpIN()
+
+    if type == GT:
+        return OpGT()
+    
+    if type == GE:
+        return OpGE()
+
+    if type == LT:
+        return OpLT()
+
+    if type == LE:
+        return OpLE()
+
+class TypeInteger:
+    def Parse(self, val):
+        return int(val)
+
+class TypeDouble:
+    def Parse(self, val):
+        return float(val)
+
+class TypeString:
+    def Parse(self, val):
+        return val
+
+def CreateType(tp):
+    if tp == INT:
+        return TypeInteger()
+
+    if tp == DOU:
+        return TypeDouble()
+
+    if tp == STR:
+        return TypeString()
+    
 class Constraint:
     def __init__(self, tp, op, val):
+        self.type = CreateType(tp)
+        self.optr = CreateOperator(op)
+        self.value = val
+
+    def Match(self, val):
+        v = self.type.Parse(val)
+        return self.optr.Check(self.value, v)
         
-    
+if __name__ == '__main__':
+    sub = Subscription('{INTEGER,age,<,100}{INTEGER,height,<=,200}')
+    if sub.Match(age=10, height=10):
+        print "correct"
