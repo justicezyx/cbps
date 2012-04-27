@@ -59,6 +59,19 @@ class PeerManager:
         self.peerConnections[name] = connection
         log.msg("Registered connection for " + name + "@" + str(peerAddr))
         return True
+    
+    def Unregister(self, name, connection):
+        if name is None:
+            #the remote host name is unknown
+            #then there will be no records for this connection in the manager
+            log.msg("Unregistered an anonymous connection @ " + connection.remoteHost + ":" + str(connection.remotePort))
+            return
+
+        self.unconnectedPeers[name] = None
+        del self.peerConnections[name]  # remove connection table entry
+        del self.rt[name]   # remove routing table entry
+        
+        log.msg("Unregistered connection for " + name + "@" + connection.remoteHost + ":" + str(connection.remotePort))
 
     def RecvSUB(self, name, data):
         log.msg('Received subscription: ' + data + 'from ' + name)
@@ -73,9 +86,9 @@ class PeerManager:
 
     def Forward(self, data):
         next_hop = []
-        vals = data.split(":", 1)[0]
-        print self.rt
-        print vals
+        vals = data.split(".", 1)[0]
+        #print self.rt
+        #print vals
 
         for name in self.rt:
             subs = self.rt[name]
@@ -92,11 +105,8 @@ class PeerManager:
         self.Forward(data)
 
 class PeerConnection(protocol.Protocol):
-    
     def connectionMade(self):
         log.msg("connection made")
-        domainName = self.factory.domainName
-        localDomainName = self.factory.localDomainName
 
         self.remoteDomainName = self.factory.domainName
         self.localDomainName = self.factory.localDomainName
@@ -111,7 +121,7 @@ class PeerConnection(protocol.Protocol):
             self.Send('NAMEREQ,')
             return
 
-        if not self.factory.peerManager.Register(domainName, self):
+        if not self.factory.peerManager.Register(self.factory.domainName, self):
             self.Send('TERM,duplicate')
             self.CloseConnection()
         else:
@@ -144,6 +154,7 @@ class PeerConnection(protocol.Protocol):
     def connectionLost(self, reason):
         log.msg('connection lost for ' + self.remoteHost + ' ' + str(self.remotePort) )
         log.msg('reason: ' + reason.getErrorMessage())
+        self.factory.peerManager.Unregister(self.remoteDomainName, self)
         
 class PeerConnectionFactory(protocol.ServerFactory, protocol.ClientFactory):
     protocol = PeerConnection

@@ -23,6 +23,9 @@ class Subscription:
 
         self.count = len(self.attrConstraints)
 
+    # val argument is assumed to be a comma-separated string
+    # no white space is allowed. each field, which is separated by a comma,
+    # is an attribute assignment of the form "attribute name"="type:value"
     def Match(self, val):
         vals = val.split(",")
         if len(vals) < self.count:
@@ -31,7 +34,10 @@ class Subscription:
         assignments = {}
         for v in vals:
             name,assignment = v.split("=")
-            assignments[name] = assignment
+            
+            assignmentType, assignmentString = assignment.split(":")
+            val = CreateType(assignmentType).Parse(assignmentString)
+            assignments[name] = val
             
         for name,constraint in self.attrConstraints.items():
             if not assignments.has_key(name):
@@ -124,5 +130,5 @@ class Constraint:
         
 if __name__ == '__main__':
     sub = Subscription('{INTEGER,age,<,100}{INTEGER,height,<=,200}')
-    if sub.Match(age=10, height=10):
+    if sub.Match("age=INTEGER:10,height=INTEGER:10"):
         print "correct"
