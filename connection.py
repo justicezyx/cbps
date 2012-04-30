@@ -21,11 +21,13 @@ class PeerManager:
     to maintain operations
     """
 
-    def __init__(self):
+    def __init__(self, name = "pan"):
         self.peers = {}
         self.unconnectedPeers = {}
         self.peerConnections = {}
         self.rt = {}
+        self.listenPort = 10000
+        self.localHostName = name
 
     def AddPeer(self, name):
         log.msg('try to add peer: ' + name)
@@ -37,11 +39,11 @@ class PeerManager:
         log.msg('try to connect all unconnected peers')
         for name, connection in self.unconnectedPeers.items():
             log.msg('try to connect to peer: ' + name)
-            factory = PeerConnectionFactory(name, 'pan', self)
-            reactor.connectTCP(name, 80, factory, 1)
+            factory = PeerConnectionFactory(name, self.localHostName, self)
+            reactor.connectTCP(name, self.listenPort, factory, 1)
         
-        factory = PeerConnectionFactory(None, 'pan', self)
-        reactor.listenTCP(10000, factory)
+        factory = PeerConnectionFactory(None, self.localHostName, self)
+        reactor.listenTCP(self.listenPort, factory)
 
     def Register(self, name, connection):
         # drop connection if the peer is already in the connection list
@@ -167,7 +169,7 @@ class PeerConnectionFactory(protocol.ServerFactory, protocol.ClientFactory):
 if __name__ == '__main__':
     log.startLogging(sys.stdout)
     manager = PeerManager()
-    manager.AddPeer('astro.temple.edu')
+    manager.AddPeer('xxx.temple.edu')
     manager.ConnectPeers()
 
     reactor.run()
