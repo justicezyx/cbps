@@ -2,7 +2,7 @@ from twisted.internet import reactor, protocol
 from twisted.python import log
 import sys
 import state_machine as State
-from subscription import Subscription
+import subscription as Sub
 
 class PeerManager:
     """
@@ -28,6 +28,8 @@ class PeerManager:
         self.rt = {}
         self.listenPort = 10000
         self.localHostName = name
+        self.connectTimeout = 3
+        self.retryLimit = 3
 
     def AddPeer(self, name):
         log.msg('try to add peer: ' + name)
@@ -36,17 +38,21 @@ class PeerManager:
             self.unconnectedPeers[name] = None
         
     def ConnectPeers(self):
-        log.msg('try to connect all unconnected peers')
         for name, connection in self.unconnectedPeers.items():
-            log.msg('try to connect to peer: ' + name)
             factory = PeerConnectionFactory(name, self.localHostName, self)
-            reactor.connectTCP(name, self.listenPort, factory, 1)
+            connector = reactor.connectTCP(name, self.listenPort, factory, self.connectTimeout)
+            connector.remoteHostName = name
+            log.msg('Try to connect to ' + name)
+
         
+    def ListenTCP(self):
         factory = PeerConnectionFactory(None, self.localHostName, self)
         reactor.listenTCP(self.listenPort, factory)
 
     def Register(self, name, connection):
-        # drop connection if the peer is already in the connection list
+        """
+        Drop connection if the other end is already in the connection list
+        """
         if self.peerConnections.has_key(name):
             log.msg('Peer ' + name + ' is already connected')
             return False
@@ -59,25 +65,29 @@ class PeerManager:
 
         self.peers[name] = peerAddr
         self.peerConnections[name] = connection
+        self.rt[name] = []
         log.msg("Registered connection for " + name + "@" + str(peerAddr))
         return True
     
     def Unregister(self, name, connection):
         if name is None:
-            #the remote host name is unknown
-            #then there will be no records for this connection in the manager
-            log.msg("Unregistered an anonymous connection @ " + connection.remoteHost + ":" + str(connection.remotePort))
+            #the remote host name is unknown then, no records for this connection in the manager
+            log.msg("Unregistered an anonymous connection @ " + connection.remoteIP + ":" + str(connection.remotePort))
             return
 
         self.unconnectedPeers[name] = None
         del self.peerConnections[name]  # remove connection table entry
         del self.rt[name]   # remove routing table entry
         
-        log.msg("Unregistered connection for " + name + "@" + connection.remoteHost + ":" + str(connection.remotePort))
+        log.msg("Unregistered connection for " + name + "@" + connection.remoteIP + ":" + str(connection.remotePort))
 
     def RecvSUB(self, name, data):
         log.msg('Received subscription: ' + data + 'from ' + name)
-        sub = Subscription(data)
+        if not Sub.FormatCheck(data):
+            self.peerConnections[name].Send('Wrong Subscriptoin format')
+            return
+
+        sub = Sub.Subscription(data)
         self.InstallSUB(name, sub)
 
     def InstallSUB(self, name, sub):
@@ -86,25 +96,28 @@ class PeerManager:
         else:
             self.rt[name] = [sub]
 
-    def Forward(self, data):
+    def Forward(self, data, recv_from):
+        """
+        Message have the format as follows:
+        [attribute name]=[attribute value type]:[attribute value]|[data content]
+        """
+
         next_hop = []
-        vals = data.split(".", 1)[0]
-        #print self.rt
-        #print vals
+        assignments = Sub.ParseAttributeAssignments(data.split('|', 1)[0])
 
         for name in self.rt:
             subs = self.rt[name]
-
             for sub in subs:
-                if sub.Match(vals):
+                if sub.Match(assignments):
                     next_hop.append(name)
                     break
 
+        next_hop.remove(recv_from)
         for host in next_hop:
             self.peerConnections[host].Send(data)
 
-    def RecvMSG(self, data):
-        self.Forward(data)
+    def RecvMSG(self, data, recv_from):
+        self.Forward(data, recv_from)
 
 class PeerConnection(protocol.Protocol):
     def connectionMade(self):
@@ -112,27 +125,27 @@ class PeerConnection(protocol.Protocol):
 
         self.remoteDomainName = self.factory.domainName
         self.localDomainName = self.factory.localDomainName
+        self.peerManager = self.factory.peerManager
 
         peer = self.transport.getPeer()
-        self.remoteHost = peer.host
+        self.remoteIP = peer.host
         self.remotePort = peer.port
-        self.stateMachine = State.StateMachine(self)
 
+        self.stateMachine = State.StateMachine(self)
         if self.factory.domainName is None:
             self.stateMachine.Set(State.INIT)
-            self.Send('NAMEREQ,')
+            self.Send('NREQ')
             return
 
         if not self.factory.peerManager.Register(self.factory.domainName, self):
             self.Send('TERM,duplicate')
             self.CloseConnection()
         else:
-            # this connection is registered
             self.stateMachine.Set(State.READY)
 
     def dataReceived(self, data):
         data = data.strip()
-        log.msg('Data received from ' + self.remoteHost + ' ' + str(self.remotePort) )
+        log.msg('Data received from ' + self.remoteIP + ' ' + str(self.remotePort) )
         log.msg('Data: ' + data)
         output = self.stateMachine.Accept(data)
         if output is not None:
@@ -140,21 +153,21 @@ class PeerConnection(protocol.Protocol):
     
     def CloseConnection(self, reason = ''):
         log.msg('Closing connection to ' + 
-                self.remoteHost +
+                self.remoteIP +
                 str(self.remotePort))
         log.msg('Reason: ' + reason)
         self.transport.loseConnection()
 
     def Send(self, data):
         log.msg('Sending data to ' +
-                self.remoteHost +
+                self.remoteIP +
                 str(self.remotePort))
         log.msg('Data: ' + data)
         self.transport.write(data)
 
 
     def connectionLost(self, reason):
-        log.msg('connection lost for ' + self.remoteHost + ' ' + str(self.remotePort) )
+        log.msg('connection lost for ' + self.remoteIP + ' ' + str(self.remotePort) )
         log.msg('reason: ' + reason.getErrorMessage())
         self.factory.peerManager.Unregister(self.remoteDomainName, self)
         
@@ -165,11 +178,21 @@ class PeerConnectionFactory(protocol.ServerFactory, protocol.ClientFactory):
         self.domainName = name
         self.localDomainName = localName
         self.peerManager = manager
+        self.retryCount = 1
+        self.retryLimit = manager.retryLimit
+
+    def clientConnectionFailed(self, connector, reason):
+        log.msg('Cannot connect to remote host ' + connector.remoteHostName + ' retry count: ' + str(self.retryCount))
+        self.retryCount += 1
+        if self.retryCount <= self.retryLimit:
+            connector.connect()
 
 if __name__ == '__main__':
     log.startLogging(sys.stdout)
     manager = PeerManager()
-    manager.AddPeer('xxx.temple.edu')
+    #print manager.localHostName
+    manager.AddPeer('zodiac.cis.temple.edu')
+    manager.ListenTCP()
     manager.ConnectPeers()
 
     reactor.run()
