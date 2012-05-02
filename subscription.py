@@ -32,6 +32,22 @@ def FormatCheck(string):
                 return False
     return True
 
+class AttributeAssignment:
+    def __init__(self, string):
+        vals = string.split(',')
+        self.values = {}
+        for v in vals:
+            name,value = v.split('=')
+            valueType, valueString = value.split(':')
+            val = CreateType(valueType).Parse(valueString)
+            self.values[name] = val
+
+    def __getitem__(self, name):
+        return self.values[name]
+
+    def has_key(self, name):
+        return self.values.has_key(name)
+
 def ParseAttributeAssignments(string):
     """
     Attribute assignments have format as follows:
@@ -156,3 +172,9 @@ if __name__ == '__main__':
     sub = Subscription('{INTEGER,age,>,1}')
     if sub.Match(ParseAttributeAssignments("age=INTEGER:2,height=INTEGER:2")):
         print "correct"
+    
+    aa = AttributeAssignment("age=INTEGER:2,height=INTEGER:2")
+
+
+    if sub.Match(aa):
+        print 'correct'

@@ -103,7 +103,7 @@ class PeerManager:
         """
 
         next_hop = []
-        assignments = Sub.ParseAttributeAssignments(data.split('|', 1)[0])
+        assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
 
         for name in self.rt:
             subs = self.rt[name]
@@ -112,12 +112,15 @@ class PeerManager:
                     next_hop.append(name)
                     break
 
-        next_hop.remove(recv_from)
+        #TODO: this should be added in the final code
+        #next_hop.remove(recv_from)   # commented for test purpose
         for host in next_hop:
             self.peerConnections[host].Send(data)
 
     def RecvMSG(self, data, recv_from):
         self.Forward(data, recv_from)
+        #self.Dispatch(data, recv_from)
+        #TODO: messages should be forwarded to client manager for dispatching 
 
 class PeerConnection(protocol.Protocol):
     def connectionMade(self):
@@ -191,8 +194,10 @@ if __name__ == '__main__':
     log.startLogging(sys.stdout)
     manager = PeerManager()
     #print manager.localHostName
-    manager.AddPeer('zodiac.cis.temple.edu')
+    manager.AddPeer('www.google.com')
     manager.ListenTCP()
     manager.ConnectPeers()
 
+    #reactor.listenTCP(10000, protocol.ServerFactory())
+    reactor.listenUDP(10000, protocol.DatagramProtocol())
     reactor.run()
