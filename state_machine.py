@@ -1,5 +1,5 @@
 import sys
-import peer_connection
+import peer_manager
 from twisted.python import log
 
 class State:
