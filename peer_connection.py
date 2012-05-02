@@ -194,7 +194,7 @@ if __name__ == '__main__':
     log.startLogging(sys.stdout)
     manager = PeerManager()
     #print manager.localHostName
-    manager.AddPeer('www.google.com')
+    manager.AddPeer('planetlab1.cnis.nyit.edu')
     manager.ListenTCP()
     manager.ConnectPeers()
 

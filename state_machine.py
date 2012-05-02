@@ -1,5 +1,5 @@
 import sys
-import connection
+import peer_connection
 from twisted.python import log
 
 class State:
