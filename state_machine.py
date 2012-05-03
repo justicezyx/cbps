@@ -7,6 +7,7 @@ TODO: Revise this into a different name
 import sys
 import peer_manager
 from twisted.python import log
+from util import Log
 
 class State:
     def __init__(self, connection):
@@ -36,10 +37,10 @@ class State:
         try:
             h = getattr(self, handler)
         except AttributeError:
-            log.msg('Calling HandleDefault')
+            Log.Msg('Calling HandleDefault')
             return self.HandleDefault(data)
         else:
-            log.msg('Calling ' + handler)
+            Log.Msg('Calling ' + handler)
             return h(input)
 
     def HandleDefault(self, data):
@@ -67,12 +68,12 @@ class InitState(State):
         
 class ReadyState(InitState):
     def HandleSUB(self, data):
-        log.msg('Received subscription: ' + data)
+        Log.Msg('Received subscription: ' + data)
         self.connection.peerManager.RecvSUB(self.connection.remoteDomainName, data)
         return None, self
 
     def HandleMSG(self, data):
-        log.msg('Received message: ' + data)
+        Log.Msg('Received message: ' + data)
         self.connection.peerManager.RecvMSG(data, self.connection.remoteDomainName)
         return None, self
 
@@ -91,12 +92,14 @@ class StateMachine:
         return out
 
     def Set(self, state):
-        log.msg('Setting state to ' + state)
+        Log.Msg('Setting state to ' + state)
         self.state = State.Create(state, self.connection)
 
 if __name__ == '__main__':
-    log.startLogging(sys.stdout)
+    Log.StartLogging(sys.stdout)
+
     connection = connection.PeerConnection()
+
     m = StateMachine(connection)
     m.Accept('Default,b')
     m.Set(READY)

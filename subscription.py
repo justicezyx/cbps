@@ -1,5 +1,4 @@
 """ Attribute value types
-
 Constaints that represent value types
 """
 INT = 'INTEGER'
@@ -7,7 +6,6 @@ DOU = 'DOUBLE'
 STR = 'STRING'
 
 """ Operators
-
 Constaints that represent operators
 """
 IN = 'in'

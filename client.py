@@ -1,5 +1,6 @@
 from twisted.internet import reactor, protocol
-from twisted.python import log
+from util import Log
+import config
 import sys
 
 """ Client class
@@ -12,17 +13,31 @@ Specific functions are:
 """
 
 class Client(protocol.Protocol):
-    def __init__(self):
-        import config
-        self.remotePort = config.LISTEN_PORT
-
     def connectionMade(self):
         """ Made connection to a broker
 
         A broker's client manager will handle connection establishment
         The listening port of the client manager is 10001
         """
+        self.username = self.factory.username
         
+    def dataReceived(self, data):
+        """ Received data
+
+        The data should comply with the protocol
+        """
+        if data.split(',', 1)[0] == 'NREQ':
+            self.transport.write('NAME,' + self.username)
+    
+class ClientFactory(protocol.ClientFactory):
+    protocol = Client
+
+    def __init__(self, username):
+        self.username = username
+
 if __name__ == '__main__':
-    # TODO
-    pass
+    Log.StartLogging(sys.stdout)
+    factory = ClientFactory('zyx')
+
+    reactor.connectTCP('localhost', config.BR_CLIENT_LISTEN_PORT, factory)
+    reactor.run()
