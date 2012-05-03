@@ -1,3 +1,9 @@
+""" This is the state machine class for broker to maintain peering state
+
+This is not a general state machine implementation for all protocols
+TODO: Revise this into a different name
+"""
+
 import sys
 import peer_manager
 from twisted.python import log

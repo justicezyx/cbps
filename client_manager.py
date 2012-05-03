@@ -1,11 +1,13 @@
 from twisted.internet import reactor, protocol
 from twisted.python import log
 import sys
+import config
 
 """ This is for the management of clients
 
 Probably will merge PeerManager and ClientManager into one Broker class
 """
+
 
 class ClientConnection(protocol.Protocol):
     def connectionMade(self):
@@ -45,18 +47,18 @@ class ClientConnectionFactory(protocol.ServerFactory):
 class ClientManager:
     """ Manage client information
     
-    Each connection will be an ephemeral TCP connection
-    The client needs to indicate its name to the manager to register subscriptions and 
-    pull messages
+    Each connection will be persistent TCP connection
+    The client needs to indicate its name to the manager to 
+    1. register subscriptions
+    2. pull messages
 
     Each side can close the connection by sending a 'TERM' message
-    Each side can safely close connection after completing tasks
     """
 
-    def __init__(self, name = "pan"):
+    def __init__(self):
         self.clients = {}   # name: connection pairs
         self.subscriptionTable = {} # name: subscription pairs
-        self.listenPort = 10001
+        self.listenPort = config.BR_CLIENT_LISTEN_PORT
         
 
     def ListenTCP(self):
@@ -107,6 +109,7 @@ class ClientManager:
 
     def Unregister(self, name):
         """ This function is only called if this connection has been named before
+
         if name is 'Unknown', 
         that means the connection connecting host "name" has not been recorded
         This will be removed
@@ -131,7 +134,7 @@ class ClientManager:
         self.clients[name] = conn
 
 if __name__ == '__main__':
-    manager = ClientManager('localhost')
+    manager = ClientManager()
     manager.ListenTCP()
 
     log.startLogging(sys.stdout)

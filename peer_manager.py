@@ -11,17 +11,16 @@ class PeerManager:
 
     These peers are identified by their domain names. The server goes
     through the following steps to establish connections to peers:
-    1. resolve domain names to obtain IP addresses
-    2. establish tcp connections to peers
-        2.1. successfully established connections are recorded
-        2.2. failed connections are retried and queued if a certain
+    1. establish tcp connections to peers
+        1.1. successfully established connections are recorded
+        1.2. failed connections are retried and queued if a certain
         number of trials fail. Will try periodically with a large
         interval time
-    3. a connection management protocol is created for each connection
+    2. a connection management protocol is created for each connection
     to maintain operations
     """
 
-    def __init__(self, name = "pan"):
+    def __init__(self, name = ""):
         self.peers = {}
         self.unconnectedPeers = {}
         self.peerConnections = {}
