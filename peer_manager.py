@@ -90,8 +90,8 @@ class PeerManager:
 
     def RecvSUB(self, name, data):
         Log.Msg('Received subscription: ' + data + 'from ' + name)
-        if not Sub.FormatCheck(data):
-            self.peerConnections[name].Send('Wrong Subscriptoin format')
+        if not Sub.Subscription.FormatCheck(data):
+            self.peerConnections[name].Send('[ERR] Invalid subscriptoin format')
             return
 
         sub = Sub.Subscription(data)
@@ -104,8 +104,8 @@ class PeerManager:
             self.rt[name] = [sub]
 
     def Forward(self, data, recv_from):
-        """
-        Message have the format as follows:
+        """ Message have the format as follows:
+
         [attribute name]=[attribute value type]:[attribute value]|[data content]
         """
 
@@ -122,7 +122,7 @@ class PeerManager:
         #TODO: this should be added in the final code
         #next_hop.remove(recv_from)   # commented for test purpose
         for host in next_hop:
-            self.peerConnections[host].Send(data)
+            self.peerConnections[host].Send('MSG,' + data)
 
     def RecvMSG(self, data, recv_from):
         self.Forward(data, recv_from)

@@ -65,8 +65,10 @@ if __name__ == '__main__':
     print NetInfo.GetLocalDomainName()
     print NetInfo.TEST_SITE
     print NetInfo.TEST_PORT
+
     import sys
     Log.StartLogging(sys.stdout)
+
     Log.Msg('test')
     Log.Err('test')
     
