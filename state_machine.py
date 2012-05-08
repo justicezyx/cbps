@@ -44,7 +44,9 @@ class State:
             return h(input)
 
     def HandleDefault(self, data):
-        return "Default: " + data, self
+        # echo back and close connection
+        self.connection.CloseConnection()
+        return 'TERM', self
 
     def HandleTERM(self, data):
         self.connection.CloseConnection('Terminated by remote host')
@@ -63,7 +65,8 @@ class InitState(State):
         return None, self
 
     def HandleDefault(self, data):
-        self.connection.Send('NREQ')
+        #self.connection.Send('NREQ')
+        self.connection.CloseConnection('Unknown command')
         return None, self
         
 class ReadyState(InitState):

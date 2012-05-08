@@ -55,6 +55,6 @@ if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
 
     factory = DummyPeerConnectionFactory('zyx')
-    reactor.connectTCP('localhost', 10000, factory)
+    reactor.connectTCP('ricepl-1.cs.rice.edu', 10000, factory)
 
     reactor.run()
