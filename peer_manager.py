@@ -218,6 +218,5 @@ if __name__ == '__main__':
     manager.AddPeerFromFile('nodes')
     manager.ListenTCP()
     manager.ConnectPeers()
-    print manager.localHostName
 
     reactor.run()

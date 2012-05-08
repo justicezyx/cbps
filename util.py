@@ -121,9 +121,14 @@ class PeerListFile:
         self.fname = fname
 
     def Get(self):
-        f = open(self.fname, 'r')
-        lines = [line.strip() for line in f if line.strip() != '']
-        f.close()
+        lines = []
+        try:
+            f = open(self.fname, 'r')
+        except IOError as e:
+            Log.Err(str(e))
+        else:
+            lines = [line.strip() for line in f if line.strip() != '']
+            f.close()
         return lines
 
 if __name__ == '__main__':

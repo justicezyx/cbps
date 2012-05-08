@@ -2,3 +2,5 @@
 *.swp
 test
 nodes
+tmp
+allnodes
