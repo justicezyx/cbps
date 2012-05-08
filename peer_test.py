@@ -39,7 +39,7 @@ class DummyPeerConnection(protocol.Protocol):
             reactor.callLater(1, self.SendData)
 
     def dataReceived(self, data):
-        Log.Data(data)
+        Log.Data('[recv]', data)
         reactor.callLater(1, self.SendData)
 
 class DummyPeerConnectionFactory(protocol.ClientFactory):

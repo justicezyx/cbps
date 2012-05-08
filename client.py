@@ -26,6 +26,7 @@ class Client(protocol.Protocol):
 
         The data should comply with the protocol
         """
+        
         if data.split(',', 1)[0] == 'NREQ':
             self.transport.write('NAME,' + self.username)
     

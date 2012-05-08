@@ -51,8 +51,8 @@ class Subscription:
             #Type,Name,Op,Val = constraint.split(',', 3)
             #self.attrConstraints[Name] = AttributeConstraint(Type, Op, Val)
 
-            aa = AttributeConstraint(constraint)
-            self.attrConstraints[aa.attrName] = aa
+            ac = AttributeConstraint(constraint)
+            self.attrConstraints[ac.attrName] = ac
 
         self.count = len(self.attrConstraints)
 

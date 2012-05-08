@@ -5,6 +5,8 @@ import state_machine as State
 import subscription as Sub
 from util import Log
 from util import NetInfo
+from util import PeerListFile
+
 import config
 
 class PeerManager:
@@ -36,16 +38,27 @@ class PeerManager:
         self.connectTimeout = config.BR_CONN_TIMEOUT
         self.retryLimit = config.BR_CONN_RETRY_LIMIT
 
+    def AddPeerFromFile(self, fname):
+        peers = PeerListFile(fname).Get()
+        for peer in peers:
+            self.AddPeer(peer)
+
     def AddPeer(self, name):
         Log.Msg('AddPeer', name)
-        if not self.peers.has_key(name):
+        if not self.peers.has_key(name) and name != self.localHostName:
+            #
+            # if this peer is already in the peer list
+            # just return and do nothing
+            #
+            Log.Msg('Added peer', name)
+            Log.Msg('Local host name', self.localHostName)
+
             self.peers[name] = None
             self.unconnectedPeers[name] = None
         
     def ConnectPeers(self):
         for name, connection in self.unconnectedPeers.items():
             Log.Msg('Attempt to connect', name)
-            #Log.Msg('Try to connect to ' + name)
 
             factory = PeerConnectionFactory(name, self.localHostName, self)
             connector = reactor.connectTCP(name, self.listenPort, factory, self.connectTimeout)
@@ -60,6 +73,7 @@ class PeerManager:
         """ Register [connection] for [name]
         Drop connection if the other end is already in the connection list
         """
+
         if self.peerConnections.has_key(name):
             Log.Msg('Peer', name, 'is already connected')
             return False
@@ -68,8 +82,8 @@ class PeerManager:
 
         if self.unconnectedPeers.has_key(name):
             del self.unconnectedPeers[name]
-        peerAddr = connection.transport.getPeer()
 
+        peerAddr = connection.transport.getPeer()
         self.peers[name] = peerAddr
         self.peerConnections[name] = connection
         self.rt[name] = []
@@ -105,7 +119,6 @@ class PeerManager:
 
     def Forward(self, data, recv_from):
         """ Message have the format as follows:
-
         [attribute name]=[attribute value type]:[attribute value]|[data content]
         """
 
@@ -165,15 +178,12 @@ class PeerConnection(protocol.Protocol):
     def CloseConnection(self, reason = ''):
         Log.Msg('Closing connection to', self.remoteAddr)
         Log.Msg('Reason:', reason)
-
         self.transport.loseConnection()
 
     def Send(self, data):
         Log.Msg('Sending data to', self.remoteAddr)
         Log.Data(data)
-
         self.transport.write(data)
-
 
     def connectionLost(self, reason):
         Log.Msg('connection lost for ' + self.remoteIP + ' ' + str(self.remotePort) )
@@ -193,9 +203,9 @@ class PeerConnectionFactory(protocol.ServerFactory, protocol.ClientFactory):
         self.retryLimit = manager.retryLimit
 
     def clientConnectionFailed(self, connector, reason):
-        Log.Msg(' '.join(['Connection attempt failed', connector.remoteHostName]))
-        Log.Msg(' '.join(['Reason:', reason.getErrorMessage()]))
-        Log.Msg(' '.join(['Retry count:', str(self.retryCount)]))
+        Log.Msg('Connection attempt failed', connector.remoteHostName)
+        Log.Msg('Reason:', reason.getErrorMessage())
+        Log.Msg('Retry count:', str(self.retryCount))
 
         self.retryCount += 1
         if self.retryCount <= self.retryLimit:
@@ -205,7 +215,7 @@ if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
     manager = PeerManager()
 
-    manager.AddPeer('astro.temple.edu')
+    manager.AddPeerFromFile('nodes')
     manager.ListenTCP()
     manager.ConnectPeers()
     print manager.localHostName

@@ -39,7 +39,10 @@ class NetInfo:
 
 from twisted.python import log    
 class Log:
-    
+    """ Log class for logging
+    Message, Error, Data, StartLogging
+    """
+
     @staticmethod
     def Msg(*msg):
         text = '[MSG] ' + ' '.join(msg)
@@ -60,6 +63,69 @@ class Log:
         log.startLogging(fd)
     
 
+from subscription import Subscription
+class SubFile:
+    """ Subscription data file
+    Format:
+    [subscription source] [subscription]
+    ...
+    Each subscription source corresponds to one subscription
+    Each peer records multiple subscriptions for each subscription source
+    """
+
+    def __init__(self, fname):
+        self.fname = fname
+
+    def Open(self, fname):
+        self.fname = fname
+
+    def Get(self):
+        f = open(self.fname, 'r')
+        lines = [line.strip() for line in f if line.strip() != '']
+        f.close()
+
+        res = {}
+        for line in lines:
+            dname, sub = line.split()
+            if res.has_key(dname):
+                res[dname] = [Subscription(sub)]
+            else:
+                res[dname].append(Subscription(sub))
+        return res
+
+    def Append(self, src, sub):
+        # write data into subscription file
+        f = open(self.fname, 'a')
+        f.write(' '.join([src, sub]))
+        f.write('\n')
+        f.close()
+
+    def AppendMultiple(self, pairs):
+        # write multiple (src, sub) to the file
+        f = open(self.fname, 'a')
+        for pair in pairs:
+            f.write(' '.join(pair))
+            f.write('\n')
+        f.close()
+
+class PeerListFile:
+    """ Process peer list file
+    A file has the format:
+    [peer domain name]
+    """
+    
+    def __init__(self, fname):
+        self.fname = fname
+
+    def Open(self, fname):
+        self.fname = fname
+
+    def Get(self):
+        f = open(self.fname, 'r')
+        lines = [line.strip() for line in f if line.strip() != '']
+        f.close()
+        return lines
+
 if __name__ == '__main__':
     print NetInfo.GetLocalIP()
     print NetInfo.GetLocalDomainName()
@@ -72,5 +138,10 @@ if __name__ == '__main__':
     Log.Msg('test')
     Log.Err('test')
     
-        
+    plfile = PeerListFile('nodes')
+    print 'nodes file content'
+    print plfile.Get()
     
+    subfile = SubFile('nodes')
+    subfile.Append('aaa', 'bbb')
+    subfile.AppendMultiple([('1','11'), ('2', '22')])
