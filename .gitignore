@@ -4,3 +4,4 @@ test
 nodes
 tmp
 allnodes
+*.bak
