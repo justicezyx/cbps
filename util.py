@@ -83,8 +83,8 @@ class SubFile:
         lines = []
         try:
             f = open(self.fname, 'r')
-        except IOError as e:
-            Log.Err(str(e))
+        except IOError:
+            Log.Err('Cannot open file', self.fname)
         else:
             lines = [line.strip() for line in f if line.strip() != '']
             f.close()
@@ -129,8 +129,8 @@ class PeerListFile:
         lines = []
         try:
             f = open(self.fname, 'r')
-        except IOError as e:
-            Log.Err(str(e))
+        except IOError:
+            Log.Err('Cannot open file', self.fname)
         else:
             lines = [line.strip() for line in f if line.strip() != '']
             f.close()
