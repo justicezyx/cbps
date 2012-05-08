@@ -185,6 +185,10 @@ class PeerConnection(protocol.Protocol):
         Log.Data(data)
         self.transport.write(data)
 
+    def Alive(self, now):
+        Log.Msg('The remote sends keepalive becon')
+        #TODO: Update the time of sending the next keepalive message
+
     def connectionLost(self, reason):
         Log.Msg('connection lost for ' + self.remoteIP + ' ' + str(self.remotePort) )
         Log.Msg('reason: ' + reason.getErrorMessage())

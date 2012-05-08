@@ -8,6 +8,7 @@ import sys
 import peer_manager
 from twisted.python import log
 from util import Log
+import time
 
 class State:
     def __init__(self, connection):
@@ -51,6 +52,11 @@ class State:
 
     def HandleTERM(self, data):
         self.connection.CloseConnection('Terminated by remote host')
+        return None, self
+
+    def HandelHELLO(self, data):
+        self.connection.Alive(time.time())
+        self.connection.Send('HELLOACK')
         return None, self
 
 INIT = 'Init'
@@ -102,9 +108,6 @@ class StateMachine:
 
 if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
-
-    connection = connection.PeerConnection()
-
-    m = StateMachine(connection)
-    m.Accept('Default,b')
+    m = StateMachine(None)
+    m.Accept('DEFAULT')
     m.Set(READY)
