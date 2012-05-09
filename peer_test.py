@@ -16,15 +16,15 @@ class DummyPeerConnection(protocol.Protocol):
     """
 
     def __init__(self):
-        self.dataQueue = ['NAME,zyx',
-                          'SUB,{INTEGER,age,>,1}',
-                          'MSG,age=INTEGER:2']
         self.currentIndex = 0
 
     def connectionMade(self):
         Log.Msg("Connection made")
-        Log.Msg('Queue length', str(len(self.dataQueue)) )
         self.localHostName = self.factory.localHostName
+        self.dataQueue = ['NAME,' + self.localHostName,
+                          'SUB,{INTEGER,age,>,1}',
+                          'MSG,age=INTEGER:2']
+        Log.Msg('Queue length', str(len(self.dataQueue)) )
 
     def SendData(self):
         Log.Msg('SendData index', str(self.currentIndex))
@@ -50,11 +50,23 @@ class DummyPeerConnectionFactory(protocol.ClientFactory):
 
 from twisted.internet import reactor
 import sys
+from util import NetInfo
 
 if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
+    if len(sys.argv) > 1:
+        host_name = sys.argv[1]
+    else:
+        host_name = 'localhost'
 
-    factory = DummyPeerConnectionFactory('zyx')
-    reactor.connectTCP('ricepl-1.cs.rice.edu', 10000, factory)
+    if len(sys.argv) > 2:
+        remote_port = sys.argv[2]
+    else:
+        remote_port = 10000
+
+    local_name = NetInfo.GetLocalDomainName()
+
+    factory = DummyPeerConnectionFactory(local_name)
+    reactor.connectTCP(host_name, remote_port, factory)
 
     reactor.run()
