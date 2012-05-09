@@ -26,8 +26,7 @@ class PeerManager:
     """
 
     def __init__(self, name = ""):
-        Log.Msg('PeerManager init')
-
+        #Log.Msg('PeerManager init')
         self.peers = {}
         self.unconnectedPeers = {}
         self.peerConnections = {}
@@ -44,7 +43,7 @@ class PeerManager:
             self.AddPeer(peer)
 
     def AddPeer(self, name):
-        Log.Msg('AddPeer', name)
+        #Log.Msg('AddPeer', name)
         if not self.peers.has_key(name) and name != self.localHostName:
             #
             # if this peer is already in the peer list
@@ -75,7 +74,7 @@ class PeerManager:
         """
 
         if self.peerConnections.has_key(name):
-            Log.Msg('Peer', name, 'is already connected')
+            Log.Err('[Already Registered', name)
             return False
 
         connection.remoteDomainName = name
@@ -87,23 +86,24 @@ class PeerManager:
         self.peers[name] = peerAddr
         self.peerConnections[name] = connection
         self.rt[name] = []
-        Log.Msg('Registered connection for', name, "@", str(peerAddr))
+
+        Log.Msg('[Registered]', name)
+
         return True
     
     def Unregister(self, name, connection):
         if name is None or name == '':
             #the remote host name is unknown then, no records for this connection in the manager
-            Log.Msg('Unregistered an anonymous connection', connection.remoteIP+':'+str(connection.remotePort))
+            #Log.Msg('[Unregistered]', 'Anonymous')
             return
 
         self.unconnectedPeers[name] = None
         del self.peerConnections[name]  # remove connection table entry
         del self.rt[name]   # remove routing table entry
-        
-        Log.Msg('Unregistered connection to', name)
+        #Log.Msg('Unregistered connection to', name)
 
     def RecvSUB(self, name, data):
-        Log.Msg('Received subscription: ' + data + 'from ' + name)
+        #Log.Msg('[Received subscription]', data, '[From]', name)
         if not Sub.Subscription.FormatCheck(data):
             self.peerConnections[name].Send('[ERR] Invalid subscriptoin format')
             return
@@ -144,8 +144,7 @@ class PeerManager:
 
 class PeerConnection(protocol.Protocol):
     def connectionMade(self):
-        Log.Msg("connection made")
-
+        #Log.Msg("connection made")
         self.remoteDomainName = self.factory.domainName
         self.localDomainName = self.factory.localDomainName
         self.peerManager = self.factory.peerManager
@@ -161,7 +160,7 @@ class PeerConnection(protocol.Protocol):
             self.Send('NREQ')
             return
 
-        if not self.factory.peerManager.Register(self.factory.domainName, self):
+        if not self.peerManager.Register(self.factory.domainName, self):
             self.Send('TERM,duplicate')
             self.CloseConnection()
         else:
@@ -169,37 +168,46 @@ class PeerConnection(protocol.Protocol):
 
     def dataReceived(self, data):
         data = data.strip()
-        Log.Msg('Data received from', self.remoteAddr)
-        Log.Data(data)
+        #Log.Msg('Data received from', self.remoteAddr)
+        #Log.Data(data)
         output = self.stateMachine.Accept(data)
         if output is not None:
             self.Send(output)
     
     def CloseConnection(self, reason = ''):
-        Log.Msg('Closing connection to', self.remoteAddr)
-        Log.Msg('Reason:', reason)
+        #Log.Msg('Closing connection to', self.remoteAddr)
+        #Log.Msg('Reason:', reason)
         self.transport.loseConnection()
 
     def Send(self, data):
-        Log.Msg('Sending data to', self.remoteAddr)
-        Log.Data(data)
+        #Log.Msg('Sending data to', self.remoteAddr)
+        #Log.Data(data)
         self.transport.write(data)
 
-    def Alive(self, now):
-        Log.Msg('The remote sends keepalive becon')
+    def SendHello(self):
+        now = time.time()
+        if now >= (self.lastHelloTime + self.helloInterval):
+            self.Send('HELLO')
+        #TODO: Considering move the keeplive function into a new class
+
+    def RecvHello(self, now):
+        #Log.Msg('The remote sends keepalive becon')
+        self.lastHelloTime = now
         #TODO: Update the time of sending the next keepalive message
 
     def connectionLost(self, reason):
-        Log.Msg('connection lost for ' + self.remoteIP + ' ' + str(self.remotePort) )
-        Log.Msg('reason: ' + reason.getErrorMessage())
-        self.factory.peerManager.Unregister(self.remoteDomainName, self)
+        if self.remoteDomainName == '':
+            Log.Msg('[Connection Lost]', self.remoteIP, '[Reason]', reason.getErrorMessage())
+        else:
+            Log.Msg('[Connection Lost]', self.remoteDomainName, '[Reason]', reason.getErrorMessage())
+
+        self.peerManager.Unregister(self.remoteDomainName, self)
         
 class PeerConnectionFactory(protocol.ServerFactory, protocol.ClientFactory):
     protocol = PeerConnection
 
     def __init__(self, name, localName, manager):
-        Log.Msg(' '.join(['PeerConnectionFactory init', name, localName]))
-
+        #Log.Msg('PeerConnectionFactory init', name, localName)
         self.domainName = name
         self.localDomainName = localName
         self.peerManager = manager
@@ -207,15 +215,16 @@ class PeerConnectionFactory(protocol.ServerFactory, protocol.ClientFactory):
         self.retryLimit = manager.retryLimit
 
     def clientConnectionFailed(self, connector, reason):
-        Log.Msg('Connection attempt failed', connector.remoteHostName)
-        Log.Msg('Reason:', reason.getErrorMessage())
-        Log.Msg('Retry count:', str(self.retryCount))
+        Log.Err('[Connection Failed]', connector.remoteHostName, 
+                '[Reason]', reason.getErrorMessage(),
+                '[Retry]', str(self.retryCount))
 
         self.retryCount += 1
         if self.retryCount <= self.retryLimit:
             connector.connect()
 
 if __name__ == '__main__':
+    #Log.StartLogging(open('test.log', 'a'))
     Log.StartLogging(sys.stdout)
     manager = PeerManager()
 
