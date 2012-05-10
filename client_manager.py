@@ -73,7 +73,7 @@ class ClientManager:
         if not ',' in data:
             cmd, val = data, ''
         else:
-            cmd, val = data.strip().split(',')
+            cmd, val = data.strip().split(',', 1)
 
         if cmd == 'NAME':
             # register this connection
@@ -108,6 +108,10 @@ class ClientManager:
 
         if cmd == 'TERM':
             conn.LoseConnection('Terminated by client')
+            return
+
+        if cmd == 'NREQ':
+            conn.Send('NAME,test')
             return
         
         Log.Err('[unknow request]', cmd)

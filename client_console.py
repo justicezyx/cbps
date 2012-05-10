@@ -20,6 +20,7 @@ class ClientConsole(basic.LineReceiver):
     def __init__(self, remote_host = 'localhost', remote_port = 10001):
         self.connector = client.Connect(remote_host, remote_port)
         self.remoteHostName = remote_host
+        self.remotePort = remote_port
 
     def connectionMade(self):
         self.sendLine('Client console. Type "help" for help.')
@@ -66,9 +67,17 @@ class ClientConsole(basic.LineReceiver):
 
         self.connector.connection.Send(data)
         
+    def do_nreq(self, data):
+        self.connector.connection.Send('NREQ')
+
+    def do_connect(self, data = None):
+        if self.connector.connection is None:
+            self.connector = client.Connect(self.remoteHostName, self.remotePort)
+
     def connectionLost(self, reason):
         # stop the reactor, only because this is meant to be run in Stdio.
-        reactor.stop()
+        if reactor.running:
+            reactor.stop()
 
 if __name__ == "__main__":
     stdio.StandardIO(ClientConsole())

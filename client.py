@@ -31,6 +31,8 @@ class Client(protocol.Protocol):
         The data should comply with the protocol
         """
 
+        print data
+
         if not ',' in data:
             cmd, val = data, ''
         else:
@@ -70,7 +72,6 @@ def Connect(remote_host = 'localhost', remote_port = config.BR_CLIENT_LISTEN_POR
     connector = reactor.connectTCP(factory.remoteHostName, remote_port, factory)
     connector.remoteHostName = factory.remoteHostName
     return factory
-    
     
 if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
