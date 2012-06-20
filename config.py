@@ -5,7 +5,7 @@ BR_CLIENT_LISTEN_PORT = 10001
 BR_PEER_LISTEN_PORT = 10000
 
 # the path to the peer list file on disk
-BR_PEER_LIST = 'peer_list'
+BR_PEER_LIST = 'nodes'
 
 # the timeout for expiring a connection attempt to a peering broker
 BR_CONN_TIMEOUT = 3.0
