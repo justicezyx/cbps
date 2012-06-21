@@ -30,7 +30,9 @@ class Client(protocol.Protocol):
         self.factory.connection = self
         self.dataQueue = ['NAME,' + self.username,
                           'SUB,{INTEGER,age,>,1}',
-                          'MSG,age=INTEGER:2']
+                          'MSG,age=INTEGER:2',
+                          'MSG,age=INTEGER:1',
+                          'MSG,age=INTEGER:3',]
 
     def Subscribe(self, sub):
         self.Send(sub)
@@ -43,11 +45,11 @@ class Client(protocol.Protocol):
         self.transport.write(data)
         
     def SendData(self):
-        if self.currentIndex >= 3:
+        if self.currentIndex >= len(self.dataQueue):
             return
 
         data = self.dataQueue[self.currentIndex]
-        if self.currentIndex == 2:
+        if self.currentIndex >= 2:
             data = util.AppendTimeStamp(data)
 
         log.msg(data)
@@ -55,17 +57,14 @@ class Client(protocol.Protocol):
         self.Send(data)
         self.currentIndex += 1
 
-        if self.currentIndex < 3:
+        if self.currentIndex < len(self.dataQueue):
             reactor.callLater(1, self.SendData)
 
     def dataReceived(self, data):
         """ Received data
         The data should comply with the protocol
         """
-        #print data
-        Log.Msg(data)
         reactor.callLater(1, self.SendData)
-        return
 
         if not ',' in data:
             cmd, val = data, ''
@@ -77,13 +76,12 @@ class Client(protocol.Protocol):
             return
 
         if cmd == 'MSG':
-            log.msg(data)
             delay = ComputeDelay(val)
+            log.msg(data + repr(delay))
             return
             
 
     def connectionLost(self, reason):
-        # after lost connection set the connection to None
         self.factory.connection = None
     
 class ClientFactory(protocol.ClientFactory):

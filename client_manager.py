@@ -64,6 +64,7 @@ class ClientManager:
         reactor.listenTCP(self.listenPort, factory)
 
     def RecvFromBroker(self, data):
+        log.msg('[RecvFromBroker]' + data)
         self.Dispatch(data)
 
     def Dispatch(self, data):

@@ -123,14 +123,14 @@ class PeerManager:
             self.rt[name] = [sub]
 
     def Publish(self, data):
-        #log.msg(data)
+        log.msg('[Publish]' + data)
         self.Forward(data, None)
 
     def Forward(self, data, recv_from):
         """ Message have the format as follows:
         [attribute name]=[attribute value type]:[attribute value]|[data content]
         """
-        log.msg('[forward]' + data)
+        log.msg('[Forward]' + data)
         next_hop = []
         assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
 
