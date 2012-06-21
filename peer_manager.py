@@ -66,7 +66,6 @@ class PeerManager:
             factory = PeerConnectionFactory(name, self.localHostName, self)
             connector = reactor.connectTCP(name, self.listenPort, factory, self.connectTimeout)
             connector.remoteHostName = name
-
         
     def ListenTCP(self):
         factory = PeerConnectionFactory('', self.localHostName, self)
@@ -107,11 +106,9 @@ class PeerManager:
         #Log.Msg('Unregistered connection to', name)
 
     def RecvSUB(self, name, data):
-        #Log.Msg('[Received subscription]', data, '[From]', name)
         if not Sub.Subscription.FormatCheck(data):
             self.peerConnections[name].Send('[ERR] Invalid subscriptoin format')
             return
-
         sub = Sub.Subscription(data)
         self.InstallSUB(name, sub)
 
@@ -158,9 +155,10 @@ class PeerManager:
 
     def RecvMSG(self, data, recv_from):
         self.Forward(data, recv_from)
-        delay = self.ComputeDelay(data)
-        Log.Msg('delay', repr(delay))
-        
+        self.clientManager.RecvFromBroker(data)
+
+        #delay = self.ComputeDelay(data)
+        #Log.Msg('delay', repr(delay))
         #self.Dispatch(data, recv_from)
         #TODO: messages should be forwarded to client manager for dispatching 
 

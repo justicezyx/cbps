@@ -64,14 +64,7 @@ class ClientManager:
         reactor.listenTCP(self.listenPort, factory)
 
     def RecvFromBroker(self, data):
-        if not ',' in data:
-            cmd, val = data, ''
-        else:
-            cmd, val = data.split(',', 1)
-
-        if cmd == 'MSG':
-            self.Dispatch(val)
-            return
+        self.Dispatch(data)
 
     def Dispatch(self, data):
         log.msg('[Dispatch]' + data)

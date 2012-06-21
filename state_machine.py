@@ -45,7 +45,6 @@ class State:
             return h(input)
 
     def HandleDefault(self, data):
-        # echo back and close connection
         self.connection.Send('Unknown request')
         self.connection.CloseConnection('Unkown request')
         return None, self
@@ -70,27 +69,15 @@ class InitState(State):
     def HandleNREQ(self, data):
         self.connection.Send('NAME,' + self.connection.factory.localDomainName)
         return None, self
-
-    #def HandleDefault(self, data):
-        ##self.connection.Send('NREQ')
-        #self.connection.CloseConnection('Unknown request')
-        #return None, self
         
 class ReadyState(InitState):
     def HandleSUB(self, data):
-        #Log.Msg('Received subscription: ' + data)
         self.connection.peerManager.RecvSUB(self.connection.remoteDomainName, data)
         return None, self
 
     def HandleMSG(self, data):
-        #Log.Msg('Received message: ' + data)
         self.connection.peerManager.RecvMSG(data, self.connection.remoteDomainName)
         return None, self
-
-    #def HandleDefault(self, data):
-        #self.connection.Send('Unknown request')
-        #self.connection.CloseConnection('Unknown request')
-        #return None, self
 
 class StateMachine:
     def __init__(self, connection):
