@@ -1,6 +1,8 @@
 from twisted.internet import reactor, protocol
 from twisted.python import log
 import sys
+from time import time
+
 import state_machine as State
 import subscription as Sub
 from util import Log
@@ -121,7 +123,6 @@ class PeerManager:
         """ Message have the format as follows:
         [attribute name]=[attribute value type]:[attribute value]|[data content]
         """
-
         next_hop = []
         assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
 
@@ -137,8 +138,16 @@ class PeerManager:
         for host in next_hop:
             self.peerConnections[host].Send('MSG,' + data)
 
+    def ComputeDelay(self, data):
+        time_stamp = float(data.split('|', 2)[1])
+        now = time()
+        return now - time_stamp
+
     def RecvMSG(self, data, recv_from):
         self.Forward(data, recv_from)
+        delay = self.ComputeDelay(data)
+        Log.Msg('delay', repr(delay))
+        
         #self.Dispatch(data, recv_from)
         #TODO: messages should be forwarded to client manager for dispatching 
 

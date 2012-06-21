@@ -1,5 +1,7 @@
 from twisted.internet import protocol
 from util import Log
+from util import AppendTimeStamp
+from time import time
 
 """ Dummy peer used for testing PeerManager
 
@@ -32,7 +34,12 @@ class DummyPeerConnection(protocol.Protocol):
         if self.currentIndex >= 3:
             return
 
-        self.transport.write(self.dataQueue[self.currentIndex])
+        data = self.dataQueue[self.currentIndex]
+        if self.currentIndex == 2:
+            data = AppendTimeStamp(data)
+
+        #self.transport.write(self.dataQueue[self.currentIndex])
+        self.transport.write(data)
         self.currentIndex += 1
 
         if self.currentIndex < 3:

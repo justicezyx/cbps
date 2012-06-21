@@ -136,6 +136,18 @@ class PeerListFile:
             f.close()
         return lines
 
+from time import time
+
+def AppendTimeStamp(data, now = None):
+    if now is None:
+        now = repr(time())
+    return data + '|' + now
+    
+def ComputeDelay(data):
+    time_stamp = float(data.split('|', 2)[1])
+    now = time()
+    return now - time_stamp
+
 if __name__ == '__main__':
     print NetInfo.GetLocalIP()
     print NetInfo.GetLocalDomainName()

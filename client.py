@@ -1,6 +1,9 @@
 from twisted.internet import reactor, protocol
 from util import Log
 from util import NetInfo
+from util import ComputeDelay
+import util
+
 import config
 import sys
 
@@ -14,24 +17,52 @@ Specific functions are:
 """
 
 class Client(protocol.Protocol):
+    def __init__(self):
+        self.currentIndex = 0
+
     def connectionMade(self):
         """ Made connection to a broker
-
         A broker's client manager will handle connection establishment
         The listening port of the client manager is 10001
         """
         self.username = self.factory.username
         self.factory.connection = self
+        self.dataQueue = ['NAME,' + self.username,
+                          'SUB,{INTEGER,age,>,1}',
+                          'MSG,age=INTEGER:2']
+
+    def Subscribe(self, sub):
+        self.Send(sub)
+
+    def Publish(self, msg):
+        msg = util.AppendTimeStamp(msg)
+        sefl.Send(msg)
 
     def Send(self, data):
         self.transport.write(data)
         
+    def SendData(self):
+        if self.currentIndex >= 3:
+            return
+
+        data = self.dataQueue[self.currentIndex]
+        if self.currentIndex == 2:
+            data = util.AppendTimeStamp(data)
+
+        self.Send(data)
+        self.currentIndex += 1
+
+        if self.currentIndex < 3:
+            reactor.callLater(1, self.SendData)
+
     def dataReceived(self, data):
         """ Received data
         The data should comply with the protocol
         """
-
-        print data
+        #print data
+        Log.Msg(data)
+        reactor.callLater(1, self.SendData)
+        return
 
         if not ',' in data:
             cmd, val = data, ''
@@ -41,6 +72,12 @@ class Client(protocol.Protocol):
         if cmd == 'NREQ':
             self.Send('NAME,' + self.username)
             return
+
+        if cmd == 'MSG':
+            log.msg(data)
+            delay = ComputeDelay(val)
+            return
+            
 
     def connectionLost(self, reason):
         # after lost connection set the connection to None
@@ -77,7 +114,7 @@ if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
     factory = ClientFactory('zyx', 'localhost')
 
-    connector = reactor.connectTCP(factory.remoteHostName, config.BR_CLIENT_LISTEN_PORT, factory)
+    connector = reactor.connectTCP(factory.remoteHostName, config.BR_PEER_LISTEN_PORT, factory)
     connector.remoteHostName = factory.remoteHostName
 
     reactor.run()
