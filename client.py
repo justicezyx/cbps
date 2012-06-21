@@ -65,6 +65,7 @@ class Client(protocol.Protocol):
         The data should comply with the protocol
         """
         reactor.callLater(1, self.SendData)
+        return
 
         if not ',' in data:
             cmd, val = data, ''
