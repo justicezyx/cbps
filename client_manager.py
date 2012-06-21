@@ -42,7 +42,6 @@ class ClientConnectionFactory(protocol.ServerFactory):
         
 class ClientManager:
     """ Manage client information
-    
     Each connection will be persistent TCP connection
     The client needs to indicate its name to the manager to 
     1. register subscriptions

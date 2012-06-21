@@ -63,10 +63,19 @@ class Client(protocol.Protocol):
     def dataReceived(self, data):
         """ Received data
         The data should comply with the protocol
+        TODO: dupplication of nreq data causes closing connection need to remove this restriction
         """
         log.msg('[client receive]' + data)
-        #log.msg(data)
         reactor.callLater(1, self.SendData)
+
+        if not ',' in data:
+            cmd, val = data, ''
+        else:
+            cmd, val = data.split(',', 1)
+        if cmd == 'MSG':
+            delay = ComputeDelay(val)
+            log.msg('[delay]' + repr(delay))
+            return
         return
 
         if not ',' in data:
@@ -80,7 +89,7 @@ class Client(protocol.Protocol):
 
         if cmd == 'MSG':
             delay = ComputeDelay(val)
-            log.msg(data + repr(delay))
+            log.msg('[delay]' + repr(delay))
             return
             
 
