@@ -2,28 +2,26 @@ from twisted.internet import reactor, protocol
 from twisted.python import log
 import sys
 import config
+import subscription as Sub
+
 from util import Log
 
 """ This is for the management of clients
-
 Probably will merge PeerManager and ClientManager into one Broker class
 """
 
 
 class ClientConnection(protocol.Protocol):
     def connectionMade(self):
-        #log.msg('connectionMade')
         self.clientManager = self.factory.clientManager
         self.clientName = 'Unknown'
         self.Send('NREQ')
     
     def dataReceived(self, data):
-        #log.msg('dataRecieved: ' + data)
         data = data.strip()
-        self.clientManager.Process(data, self)
+        self.clientManager.RecvFromClient(data, self)
 
     def Send(self, data):
-        #log.msg('Sending data to ' + self.clientName)
         self.transport.write(data)
 
     def LoseConnection(self, reason):
@@ -31,9 +29,6 @@ class ClientConnection(protocol.Protocol):
         self.transport.loseConnection()
 
     def connectionLost(self, reason):
-        """ Just for debug use
-        Log this event, do nother else
-        """
         Log.Msg('[Connection Lost]', '[host]', self.clientName)
         if self.clientName != 'Unknown':
             self.clientManager.Unregister(self.clientName)
@@ -42,7 +37,6 @@ class ClientConnectionFactory(protocol.ServerFactory):
     protocol = ClientConnection
 
     def __init__(self, manager):
-        #self.localHostName = name
         self.clientManager = manager
         
 class ClientManager:
@@ -63,47 +57,59 @@ class ClientManager:
         self.msgDestCount = {} # {message_id: dest_count}
         self.clientMsgQueue = {} # {client_name: message_id}
 
+        self.peerManager = None
+
     def ListenTCP(self):
-        #log.msg('ListenTCP')
         factory = ClientConnectionFactory(self)
         reactor.listenTCP(self.listenPort, factory)
 
-    def Process(self, data, conn):
-        Log.Msg('[Data Recved]', data)
+    def RecvFromBroker(self, data):
         if not ',' in data:
             cmd, val = data, ''
         else:
-            cmd, val = data.strip().split(',', 1)
+            cmd, val = data.split(',', 1)
+
+        if cmd == 'MSG':
+            self.Dispatch(val)
+            return
+
+    def Dispatch(self, data):
+        log.msg('[Dispatch]' + data)
+        next_hop = []
+        assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
+
+        for name, subs in self.subscriptionTable.items():
+            for sub in subs:
+                if sub.Match(assignments):
+                    next_hop.append(name)
+                    break
+
+        for host in next_hop:
+            self.clients[host].Send('MSG,' + data)
+
+    def RecvFromClient(self, data, conn):
+        if not ',' in data:
+            cmd, val = data, ''
+        else:
+            cmd, val = data.split(',', 1)
 
         if cmd == 'NAME':
-            # register this connection
             if val is None or val == '':
                 Log.Err('[Empty Name]')
                 return
 
-            conn.clientName = val
-            self.Register(conn.clientName, conn)
+            log.msg('[receive from client val]' + val)
+            self.Register(val, conn)
             return
 
         if cmd == 'MSG':
-            #   Push the message to broker
-            #   broker then forward message to peer manager
-            #   then is forwarded in to the broekr networks
-            #   TODO: messages should be forwarded to peer manager for delivery
+            #forward message to peer manager
+            self.peerManager.Publish(data.split(',', 1)[1])
             return
-
-        if cmd == 'PULL':
-            if conn.clientName == 'Unknown':
-                msgs = self.PullAllMessage()
-            else:
-                msgs = self.PullMessage(conn.clientName)
-
-            for msg in msgs:
-                conn.Send('MSG,' + msg)
-            return
-
+            
         if cmd == 'SUB':
-            # TODO: this should be forwarded to peermanager for
+            self.peerManager.Broadcast(data)
+            self.Subscribe(val, conn.clientName)
             return
 
         if cmd == 'TERM':
@@ -111,12 +117,16 @@ class ClientManager:
             return
 
         if cmd == 'NREQ':
-            conn.Send('NAME,test')
+            conn.Send('NAME,' + self.peerManager.localHostName)
             return
-        
-        Log.Err('[unknow request]', cmd)
-        conn.LoseConnection('unknown request')
 
+    def Subscribe(self, sub, subscriber): 
+        s = Sub.Subscription(sub)
+        if self.subscriptionTable.has_key(subscriber):
+            self.subscriptionTable[subscriber].append(s)
+        else:
+            self.subscriptionTable[subscriber] = [s]
+            
     def Unregister(self, name):
         """ This function is only called if this connection has been named before
 

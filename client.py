@@ -3,6 +3,7 @@ from util import Log
 from util import NetInfo
 from util import ComputeDelay
 import util
+from twisted.python import log
 
 import config
 import sys
@@ -48,6 +49,8 @@ class Client(protocol.Protocol):
         data = self.dataQueue[self.currentIndex]
         if self.currentIndex == 2:
             data = util.AppendTimeStamp(data)
+
+        log.msg(data)
 
         self.Send(data)
         self.currentIndex += 1
@@ -114,7 +117,7 @@ if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
     factory = ClientFactory('zyx', 'localhost')
 
-    connector = reactor.connectTCP(factory.remoteHostName, config.BR_PEER_LISTEN_PORT, factory)
+    connector = reactor.connectTCP(factory.remoteHostName, config.BR_CLIENT_LISTEN_PORT, factory)
     connector.remoteHostName = factory.remoteHostName
 
     reactor.run()

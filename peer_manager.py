@@ -39,6 +39,8 @@ class PeerManager:
         self.connectTimeout = config.BR_CONN_TIMEOUT
         self.retryLimit = config.BR_CONN_RETRY_LIMIT
 
+        self.clientManager = None
+
     def AddPeerFromFile(self, fname):
         peers = PeerListFile(fname).Get()
         for peer in peers:
@@ -113,16 +115,25 @@ class PeerManager:
         sub = Sub.Subscription(data)
         self.InstallSUB(name, sub)
 
+    def Broadcast(self, data):
+        for c in self.peerConnections.values():
+            c.Send(data)
+
     def InstallSUB(self, name, sub):
         if self.rt.has_key(name):
             self.rt[name].append(sub)
         else:
             self.rt[name] = [sub]
 
+    def Publish(self, data):
+        #log.msg(data)
+        self.Forward(data, None)
+
     def Forward(self, data, recv_from):
         """ Message have the format as follows:
         [attribute name]=[attribute value type]:[attribute value]|[data content]
         """
+        log.msg('[forward]' + data)
         next_hop = []
         assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
 
@@ -134,7 +145,9 @@ class PeerManager:
                     break
 
         #TODO: this should be added in the final code
-        #next_hop.remove(recv_from)   # commented for test purpose
+        if recv_from in next_hop:
+            next_hop.remove(recv_from)   # commented for test purpose
+
         for host in next_hop:
             self.peerConnections[host].Send('MSG,' + data)
 

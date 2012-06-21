@@ -21,6 +21,9 @@ class Broker:
 
         self.clientManager.ListenTCP()
 
+        self.peerManager.clientManager = self.clientManager
+        self.clientManager.peerManager = self.peerManager
+
 if __name__ == '__main__':
     broker = Broker()
     Log.StartLogging(sys.stdout)
