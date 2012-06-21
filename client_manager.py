@@ -22,6 +22,7 @@ class ClientConnection(protocol.Protocol):
         self.clientManager.RecvFromClient(data, self)
 
     def Send(self, data):
+        log.msg(data)
         self.transport.write(data)
 
     def LoseConnection(self, reason):
@@ -71,14 +72,20 @@ class ClientManager:
         log.msg('[Dispatch]' + data)
         next_hop = []
         assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
+        #print str(assignments)
 
         for name, subs in self.subscriptionTable.items():
             for sub in subs:
+                #print str(sub)
                 if sub.Match(assignments):
+                    print 'matched' + str(sub) + str(assignments) + name
                     next_hop.append(name)
                     break
 
         for host in next_hop:
+            print 'next hop' + host + str(len(self.clients))
+            print self.clients[host]
+
             self.clients[host].Send('MSG,' + data)
 
     def RecvFromClient(self, data, conn):

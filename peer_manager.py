@@ -154,6 +154,7 @@ class PeerManager:
         return now - time_stamp
 
     def RecvMSG(self, data, recv_from):
+        log.msg('[RecvMSG]' + data)
         self.Forward(data, recv_from)
         self.clientManager.RecvFromBroker(data)
 

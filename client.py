@@ -64,6 +64,8 @@ class Client(protocol.Protocol):
         """ Received data
         The data should comply with the protocol
         """
+        log.msg('[client receive]' + data)
+        #log.msg(data)
         reactor.callLater(1, self.SendData)
         return
 
