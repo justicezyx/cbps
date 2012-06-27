@@ -5,3 +5,5 @@ tmp
 allnodes
 *.bak
 test.log
+*.data
+*.res
