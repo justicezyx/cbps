@@ -66,8 +66,11 @@ class Subscription:
         [attribute name]=[attribute type]:[value],[other attribute assignment]
         A AttributeAssignment object will handle this format
         """
+        #print self.attrConstraints
+
 
         for name,constraint in self.attrConstraints.items():
+            print name, constraint
             if not assignments.has_key(name):
                 return False
             if not constraint.Match(assignments[name]):
@@ -199,7 +202,6 @@ class TypeString:
 
 class AttributeConstraint:
     """ AttributeConstraint
-
     A 4-tuple with type, name, op, value
     """
 
@@ -227,8 +229,8 @@ class AttributeConstraint:
         return self.optr.Check(self.value, val)
         
 if __name__ == '__main__':
-    sub = Subscription('{INTEGER,age,=,2}{INTEGER,height,>,1}')
-    aa = AttributeAssignment("age=INTEGER:2,height=INTEGER:2")
+    sub = Subscription('{INTEGER,age,in,1,3}')
+    aa = AttributeAssignment("age=INTEGER:2")
     if sub.Match(aa):
         print 'correct'
 

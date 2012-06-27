@@ -71,11 +71,9 @@ class ClientManager:
         log.msg('[Dispatch]' + data)
         next_hop = []
         assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
-        #print str(assignments)
 
         for name, subs in self.subscriptionTable.items():
             for sub in subs:
-                #print str(sub)
                 if sub.Match(assignments):
                     print 'matched' + str(sub) + str(assignments) + name
                     next_hop.append(name)
@@ -104,7 +102,7 @@ class ClientManager:
 
         if cmd == 'MSG':
             #forward message to peer manager
-            self.peerManager.Publish(data.split(',', 1)[1])
+            self.peerManager.Publish(data)
             return
             
         if cmd == 'SUB':
@@ -143,7 +141,6 @@ class ClientManager:
 
     def Register(self, name, conn):
         # this will be removed
-        Log.Msg('[Registerred]', name)
 
         if self.clients.has_key(name):
             #Log.Err('[already registerred]', name)
@@ -152,6 +149,7 @@ class ClientManager:
 
         conn.clientName = name
         self.clients[name] = conn
+        Log.Msg('[Registerred]', name, '[client_no]', str(len(self.clients)))
 
     def PullAllMessage(self):
         return self.msgQueue.values()

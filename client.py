@@ -7,6 +7,7 @@ from twisted.python import log
 
 import config
 import sys
+import random
 
 """ Client class
 
@@ -20,6 +21,7 @@ Specific functions are:
 class Client(protocol.Protocol):
     def __init__(self):
         self.currentIndex = 0
+        self.outputFile = open('delay.data', 'w')
 
     def connectionMade(self):
         """ Made connection to a broker
@@ -28,11 +30,12 @@ class Client(protocol.Protocol):
         """
         self.username = self.factory.username
         self.factory.connection = self
-        self.dataQueue = ['NAME,' + self.username,
-                          'SUB,{INTEGER,age,>,1}',
-                          'MSG,age=INTEGER:2',
-                          'MSG,age=INTEGER:1',
-                          'MSG,age=INTEGER:3',]
+        self.dataQueue = ['NAME,' + self.username,]
+        self.dataQueue.extend([t.strip() for t in open('sub_100', 'r').readlines()])
+
+        for i in xrange(0):
+            text = 'MSG,age=INTEGER:' + str(random.randint(0, 65536))
+            self.dataQueue.append(text)
 
     def Subscribe(self, sub):
         self.Send(sub)
@@ -49,7 +52,7 @@ class Client(protocol.Protocol):
             return
 
         data = self.dataQueue[self.currentIndex]
-        if self.currentIndex >= 2:
+        if 'MSG' in data:
             data = util.AppendTimeStamp(data)
 
         log.msg(data)
@@ -75,6 +78,7 @@ class Client(protocol.Protocol):
         if cmd == 'MSG':
             delay = ComputeDelay(val)
             log.msg('[delay]' + repr(delay))
+            self.outputFile.write(repr(delay) + '\n')
             return
         return
 
