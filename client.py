@@ -21,7 +21,6 @@ Specific functions are:
 class Client(protocol.Protocol):
     def __init__(self):
         self.currentIndex = 0
-        self.outputFile = open('delay.data', 'w')
 
     def connectionMade(self):
         """ Made connection to a broker
@@ -31,7 +30,9 @@ class Client(protocol.Protocol):
         self.username = self.factory.username
         self.factory.connection = self
         self.dataQueue = ['NAME,' + self.username,]
-        self.dataQueue.extend([t.strip() for t in open('sub_100', 'r').readlines()])
+        self.dataQueue.extend([t.strip() for t in open(self.factory.subFile, 'r').readlines()])
+        sub_num = len(self.dataQueue) - 1
+        self.outputFile = open('delay_' + str(sub_num), 'w')
 
         for i in xrange(0):
             text = 'MSG,age=INTEGER:' + str(random.randint(0, 65536))
@@ -79,6 +80,7 @@ class Client(protocol.Protocol):
             delay = ComputeDelay(val)
             log.msg('[delay]' + repr(delay))
             self.outputFile.write(repr(delay) + '\n')
+            self.outputFile.flush()
             return
         return
 
@@ -103,9 +105,10 @@ class Client(protocol.Protocol):
 class ClientFactory(protocol.ClientFactory):
     protocol = Client
 
-    def __init__(self, username, remote_name):
+    def __init__(self, username, remote_name, sub_file):
         self.username = username
         self.remoteHostName = remote_name
+        self.subFile = sub_file
 
         self.retryCount = 0
         self.retryLimit = 3
@@ -127,9 +130,16 @@ def Connect(remote_host = 'localhost', remote_port = config.BR_CLIENT_LISTEN_POR
     connector.remoteHostName = factory.remoteHostName
     return factory
     
+import sys
+
 if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
-    factory = ClientFactory('zyx', 'localhost')
+    if len(sys.argv) <= 1:
+        sub_file = 'sub_1'
+    else:
+        sub_file = sys.argv[1]
+
+    factory = ClientFactory('zyx', 'localhost', sub_file)
 
     connector = reactor.connectTCP(factory.remoteHostName, config.BR_CLIENT_LISTEN_PORT, factory)
     connector.remoteHostName = factory.remoteHostName

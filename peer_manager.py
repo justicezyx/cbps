@@ -191,8 +191,7 @@ class PeerConnection(protocol.Protocol):
 
     def dataReceived(self, data):
         data = data.strip()
-        #Log.Msg('Data received from', self.remoteAddr)
-        #Log.Data(data)
+        Log.Data(data)
         output = self.stateMachine.Accept(data)
         if output is not None:
             self.Send(output)

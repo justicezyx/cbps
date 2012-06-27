@@ -71,7 +71,10 @@ class ClientManager:
     def Dispatch(self, data):
         log.msg('[Dispatch]' + data)
         next_hop = []
-        assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
+        assignment_text = data.split(',', 1)[1].split('|', 1)[0]
+        log.msg('[Forward assignment] ' + assignment_text)
+        assignments = Sub.AttributeAssignment(assignment_text)
+        #assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
 
         for name, subs in self.subscriptionTable.items():
             for sub in subs:
@@ -84,7 +87,7 @@ class ClientManager:
             print 'next hop' + host + str(len(self.clients))
             print self.clients[host]
 
-            self.clients[host].Send('MSG,' + data)
+            self.clients[host].Send(data)
 
     def RecvFromClient(self, data, conn):
         if not ',' in data:
@@ -140,6 +143,9 @@ class ClientManager:
         if self.clients.has_key(name):
             Log.Msg('[Unregisterred]', name)
             del self.clients[name]
+
+        if self.subscriptionTable.has_key(name):
+            del self.subscriptionTable[name]
 
     def Register(self, name, conn):
         # this will be removed
