@@ -18,6 +18,7 @@ class ClientConnection(protocol.Protocol):
         self.Send('NREQ')
     
     def dataReceived(self, data):
+        log.msg('[ClientConnection recv] ' + data)
         data = data.strip()
         self.clientManager.RecvFromClient(data, self)
 
@@ -102,6 +103,7 @@ class ClientManager:
 
         if cmd == 'MSG':
             #forward message to peer manager
+            log.msg('msg ' + data)
             self.peerManager.Publish(data)
             return
             

@@ -132,7 +132,9 @@ class PeerManager:
         """
         log.msg('[Forward]' + data)
         next_hop = []
-        assignments = Sub.AttributeAssignment(data.split('|', 1)[0])
+        assignment_text = data.split(',', 1)[1].split('|', 1)[0]
+        log.msg('[Forward assignment] ' + assignment_text)
+        assignments = Sub.AttributeAssignment(assignment_text)
 
         for name in self.rt:
             subs = self.rt[name]
