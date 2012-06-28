@@ -32,7 +32,7 @@ class Client(protocol.Protocol):
         self.dataQueue = ['NAME,' + self.username,]
         self.dataQueue.extend([t.strip() for t in open(self.factory.subFile, 'r').readlines()])
         sub_num = len(self.dataQueue) - 1
-        self.outputFile = open('delay_' + str(sub_num), 'w')
+        self.outputFile = open('delay_' + str(sub_num) + '.res', 'w')
 
         for i in xrange(0):
             text = 'MSG,age=INTEGER:' + str(random.randint(0, 65536))
@@ -135,7 +135,7 @@ import sys
 if __name__ == '__main__':
     Log.StartLogging(sys.stdout)
     if len(sys.argv) <= 1:
-        sub_file = 'sub_1'
+        sub_file = 'sub_1.data'
     else:
         sub_file = sys.argv[1]
 
