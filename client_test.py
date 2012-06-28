@@ -52,13 +52,13 @@ class Client(protocol.Protocol):
         if self.currentIndex >= 1:
             data = util.AppendTimeStamp(data)
 
-        log.msg('[Client send] ' + data)
+        #log.msg('[Client send] ' + data)
 
         self.Send(data)
         self.currentIndex += 1
 
         if self.currentIndex < len(self.dataQueue):
-            reactor.callLater(1, self.SendData)
+            reactor.callLater(0, self.SendData)
 
     def dataReceived(self, data):
         """ Received data
