@@ -58,7 +58,7 @@ class Client(protocol.Protocol):
         self.currentIndex += 1
 
         if self.currentIndex < len(self.dataQueue):
-            reactor.callLater(0, self.SendData)
+            reactor.callLater(0.01, self.SendData)
 
     def dataReceived(self, data):
         """ Received data
